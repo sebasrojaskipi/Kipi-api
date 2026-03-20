@@ -1,0 +1,16 @@
+{
+  "name": "kipi-api",
+  "version": "1.0.0",
+  "description": "Kipi - API backend para conectar la web con MySQL en Railway",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mysql2": "^3.9.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.1"
+  }
+}
