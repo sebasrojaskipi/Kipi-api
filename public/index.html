@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KIPI Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            kipi: { 50:'#f0fdf4', 100:'#dcfce7', 200:'#bbf7d0', 500:'#22c55e', 600:'#16a34a', 700:'#15803d', 800:'#166534', 900:'#14532d' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #f8fafc; }
+    .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .stat-card { transition: transform 0.15s; }
+    .stat-card:hover { transform: translateY(-2px); }
+    .loader { border: 3px solid #e5e7eb; border-top-color: #22c55e; border-radius: 50%; width: 32px; height: 32px; animation: spin .6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .fade-in { animation: fadeIn 0.3s ease-in; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body class="min-h-screen">
+
+  <!-- Login Screen -->
+  <div id="login-screen" class="min-h-screen flex items-center justify-center px-4">
+    <div class="card p-8 w-full max-w-sm text-center fade-in">
+      <div class="text-4xl font-bold text-kipi-600 mb-2">KIPI</div>
+      <p class="text-gray-500 mb-6">Dashboard Financiero</p>
+      <div id="user-list" class="space-y-3">
+        <div class="flex justify-center"><div class="loader"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dashboard Screen -->
+  <div id="dashboard-screen" class="hidden">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-100 sticky top-0 z-10">
+      <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <span class="text-xl font-bold text-kipi-600">KIPI</span>
+          <span class="text-gray-300">|</span>
+          <span id="header-name" class="text-gray-600 text-sm font-medium"></span>
+        </div>
+        <div class="flex items-center gap-3">
+          <select id="month-select" class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-kipi-500"></select>
+          <button onclick="logout()" class="text-sm text-gray-400 hover:text-gray-600">Salir</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <main class="max-w-6xl mx-auto px-4 py-6 space-y-6">
+
+      <!-- Stat Cards -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4" id="stat-cards">
+        <div class="card stat-card p-4">
+          <p class="text-xs text-gray-400 uppercase tracking-wide">Presupuesto</p>
+          <p id="s-budget" class="text-2xl font-bold text-gray-800 mt-1">-</p>
+        </div>
+        <div class="card stat-card p-4">
+          <p class="text-xs text-gray-400 uppercase tracking-wide">Gastado</p>
+          <p id="s-spent" class="text-2xl font-bold text-red-500 mt-1">-</p>
+          <div class="w-full bg-gray-100 rounded-full h-1.5 mt-2">
+            <div id="s-bar" class="bg-kipi-500 h-1.5 rounded-full transition-all" style="width:0%"></div>
+          </div>
+        </div>
+        <div class="card stat-card p-4">
+          <p class="text-xs text-gray-400 uppercase tracking-wide">Disponible</p>
+          <p id="s-remaining" class="text-2xl font-bold text-kipi-600 mt-1">-</p>
+        </div>
+        <div class="card stat-card p-4">
+          <p class="text-xs text-gray-400 uppercase tracking-wide">Ingresos</p>
+          <p id="s-income" class="text-2xl font-bold text-blue-500 mt-1">-</p>
+        </div>
+      </div>
+
+      <!-- Projection Banner -->
+      <div id="projection-banner" class="hidden card p-4 border-l-4 border-amber-400 bg-amber-50">
+        <p class="text-sm text-amber-800" id="projection-text"></p>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Category Chart -->
+        <div class="card p-5">
+          <h3 class="text-sm font-semibold text-gray-700 mb-4">Gastos por Categoria</h3>
+          <div class="relative" style="height:280px">
+            <canvas id="chart-categories"></canvas>
+          </div>
+        </div>
+        <!-- Monthly Trend -->
+        <div class="card p-5">
+          <h3 class="text-sm font-semibold text-gray-700 mb-4">Tendencia Mensual</h3>
+          <div class="relative" style="height:280px">
+            <canvas id="chart-monthly"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category Breakdown Table -->
+      <div class="card p-5">
+        <h3 class="text-sm font-semibold text-gray-700 mb-4">Detalle por Categoria</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-gray-400 border-b">
+                <th class="pb-2 font-medium">Categoria</th>
+                <th class="pb-2 font-medium text-right">Gastado</th>
+                <th class="pb-2 font-medium text-right">Presupuesto</th>
+                <th class="pb-2 font-medium text-right">%</th>
+                <th class="pb-2 font-medium" style="width:120px"></th>
+              </tr>
+            </thead>
+            <tbody id="category-table"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Recent Transactions -->
+      <div class="card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-semibold text-gray-700">Transacciones Recientes</h3>
+          <button onclick="loadMoreTransactions()" id="btn-more" class="text-xs text-kipi-600 hover:underline hidden">Ver mas</button>
+        </div>
+        <div id="tx-list" class="space-y-2"></div>
+        <div id="tx-empty" class="hidden text-center text-gray-400 text-sm py-8">No hay transacciones este mes</div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

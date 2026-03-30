@@ -5,6 +5,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { pool, testConnection } = require('./db');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,9 +14,25 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// ─── Dashboard (static files) ───
+app.use(express.static(path.join(__dirname, 'public')));
+
 // ─── Health check ───
-app.get('/', (req, res) => {
+app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'kipi-api', version: '1.0.0' });
+});
+
+// GET /api/users — Lista todos los usuarios (para dashboard login)
+app.get('/api/users', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      'SELECT id, name, nickname, phone_number, currency_symbol, is_premium, premium_until FROM user_profile ORDER BY name'
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('Error GET /api/users:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
 });
 
 // ═══════════════════════════════════════════
@@ -239,9 +256,11 @@ app.get('/api/dashboard/:userId', async (req, res) => {
         phone_number: user.phone_number,
         currency_symbol: user.currency_symbol || 'S/',
         currency_name: user.currency_name || 'Soles',
+        budget_config_json: user.budget_config_json || null,
       },
       month,
       budget,
+      monthly_budget: budget,
       total_spent: totalSpent,
       total_income: parseFloat(incomeRows[0].total_income),
       remaining,
