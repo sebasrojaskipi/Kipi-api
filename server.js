@@ -257,6 +257,8 @@ app.get('/api/dashboard/:userId', async (req, res) => {
         currency_symbol: user.currency_symbol || 'S/',
         currency_name: user.currency_name || 'Soles',
         budget_config_json: user.budget_config_json || null,
+        is_premium: user.is_premium || 0,
+        premium_until: user.premium_until || null,
       },
       month,
       budget,
