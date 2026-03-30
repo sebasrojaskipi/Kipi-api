@@ -353,6 +353,28 @@ app.get('/api/stats/:userId/monthly', async (req, res) => {
   }
 });
 
+// GET /api/stats/:userId/categories — Gasto por categoría por mes (últimos 6 meses)
+app.get('/api/stats/:userId/categories', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT
+         DATE_FORMAT(transaction_date, "%Y-%m") AS month,
+         category,
+         SUM(amount) AS total
+       FROM user_transactions
+       WHERE user_id = ? AND type = 'gasto'
+       AND transaction_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+       GROUP BY month, category
+       ORDER BY month DESC, total DESC`,
+      [req.params.userId]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('Error GET /api/stats/categories:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 // ─── Iniciar servidor ───
 app.listen(PORT, async () => {
   console.log(`🚀 Kipi API corriendo en puerto ${PORT}`);
