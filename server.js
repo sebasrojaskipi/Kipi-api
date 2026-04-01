@@ -10,6 +10,15 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Helper: fecha actual en hora Perú (UTC-5)
+function peruNow() {
+  return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }));
+}
+function peruMonth() {
+  const d = peruNow();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
 // ─── Middleware ───
 app.use(cors());
 app.use(express.json());
@@ -145,7 +154,7 @@ app.post('/api/transactions', async (req, res) => {
       `INSERT INTO user_transactions 
        (user_id, transaction_text, commerce, category, subcategory, type, amount, transaction_date) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [user_id, transaction_text, commerce, category, subcategory, type || 'gasto', amount, transaction_date || new Date()]
+      [user_id, transaction_text, commerce, category, subcategory, type || 'gasto', amount, transaction_date || peruNow()]
     );
 
     const [rows] = await pool.query('SELECT * FROM user_transactions WHERE id = ?', [result.insertId]);
@@ -175,7 +184,7 @@ app.delete('/api/transactions/:id', async (req, res) => {
 app.get('/api/dashboard/:userId', async (req, res) => {
   try {
     const userId = req.params.userId;
-    const month = req.query.month || new Date().toISOString().slice(0, 7); // '2026-03'
+    const month = req.query.month || peruMonth();
 
     // 1. Perfil del usuario (para presupuesto y moneda)
     const [userRows] = await pool.query('SELECT * FROM user_profile WHERE id = ?', [userId]);
@@ -233,7 +242,7 @@ app.get('/api/dashboard/:userId', async (req, res) => {
     );
 
     // 7. Proyección de cierre (gasto diario promedio × días del mes)
-    const now = new Date();
+    const now = peruNow();
     const [year, mon] = month.split('-').map(Number);
     const daysInMonth = new Date(year, mon, 0).getDate();
     const daysPassed = (year === now.getFullYear() && mon === now.getMonth() + 1)

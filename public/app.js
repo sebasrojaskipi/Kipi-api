@@ -4,7 +4,12 @@
 
 const API = window.location.origin;
 let currentUser = null;
-let currentMonth = new Date().toISOString().slice(0, 7); // "2026-03"
+// Usar hora de Perú (UTC-5) para determinar el mes actual
+function peruMonth() {
+  const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+let currentMonth = peruMonth();
 let chartCategories = null;
 let chartMonthly = null;
 let txOffset = 0;
@@ -94,10 +99,10 @@ function logout() {
 function setupMonthSelect() {
   const sel = document.getElementById('month-select');
   sel.innerHTML = '';
-  const now = new Date();
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }));
   for (let i = 0; i < 12; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const val = d.toISOString().slice(0, 7);
+    const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     const label = d.toLocaleDateString('es-PE', { month: 'long', year: 'numeric' });
     sel.innerHTML += `<option value="${val}" ${val === currentMonth ? 'selected' : ''}>${label.charAt(0).toUpperCase() + label.slice(1)}</option>`;
   }

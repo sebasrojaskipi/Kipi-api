@@ -233,7 +233,7 @@ var D=null;        // current month dashboard
 var PREV=null;     // previous month dashboard
 var STATS=null;    // monthly stats
 var CAT_STATS=null;// category breakdown by month
-var currentMonth=new Date().toISOString().slice(0,7);
+var currentMonth=(function(){var d=new Date(new Date().toLocaleString('en-US',{timeZone:'America/Lima'}));return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')})();
 var chartCat=null;
 var chartMonthly=null;
 var chartInsight=null;
@@ -283,7 +283,7 @@ function showApp(){getEl('login-screen').style.display='none';getEl('app-wrap').
 function logout(){localStorage.removeItem('kipi_uid');localStorage.removeItem('kipi_phone');USER_ID=null;D=null;PREV=null;STATS=null;CAT_STATS=null;if(chartCat){chartCat.destroy();chartCat=null}if(chartMonthly){chartMonthly.destroy();chartMonthly=null}if(chartInsight){chartInsight.destroy();chartInsight=null}getEl('login-screen').style.display='flex';getEl('app-wrap').classList.remove('show');getEl('login-phone').value='';getEl('login-error').textContent='';getEl('login-btn').disabled=false;getEl('login-btn').textContent='Entrar a mi cuenta'}
 (function(){var uid=localStorage.getItem('kipi_uid');if(uid){USER_ID=parseInt(uid);showApp()}})();
 
-function setupMonthSelect(){var sel=getEl('month-select');sel.innerHTML='';var now=new Date();for(var i=0;i<12;i++){var d=new Date(now.getFullYear(),now.getMonth()-i,1);var val=d.toISOString().slice(0,7);var label=d.toLocaleDateString('es-PE',{month:'long',year:'numeric'});sel.innerHTML+='<option value="'+val+'"'+(val===currentMonth?' selected':'')+'>'+capitalize(label)+'</option>'}}
+function setupMonthSelect(){var sel=getEl('month-select');sel.innerHTML='';var now=new Date(new Date().toLocaleString('en-US',{timeZone:'America/Lima'}));for(var i=0;i<12;i++){var d=new Date(now.getFullYear(),now.getMonth()-i,1);var val=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');var label=d.toLocaleDateString('es-PE',{month:'long',year:'numeric'});sel.innerHTML+='<option value="'+val+'"'+(val===currentMonth?' selected':'')+'>'+capitalize(label)+'</option>'}}
 function changeMonth(){currentMonth=getEl('month-select').value;loadData()}
 
 function nav(id){document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});document.querySelectorAll('.s-item').forEach(function(i){i.classList.remove('on')});getEl('p-'+id).classList.add('active');var item=document.querySelector('[data-p="'+id+'"]');if(item)item.classList.add('on');if(innerWidth<769)tog()}

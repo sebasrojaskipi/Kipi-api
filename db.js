@@ -12,10 +12,16 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  timezone: '-05:00', // Peru (UTC-5)
   // Railway usa SSL en conexiones públicas
-  ssl: process.env.MYSQLHOST?.includes('railway') 
-    ? { rejectUnauthorized: false } 
+  ssl: process.env.MYSQLHOST?.includes('railway')
+    ? { rejectUnauthorized: false }
     : undefined,
+});
+
+// Setear timezone de sesión MySQL a Peru en cada conexión
+pool.on('connection', (conn) => {
+  conn.query("SET time_zone = '-05:00'");
 });
 
 // Test de conexión al iniciar
