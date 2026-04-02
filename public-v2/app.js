@@ -491,27 +491,44 @@ function renderCategoryChart(categories) {
 
 // ─── Category Table ───
 function renderCategoryTable(dash) {
-  const tbody = document.getElementById('category-table');
+  const container = document.getElementById('category-detail');
   const categories = dash.categories || [];
   const sym = currentUser.symbol;
   let budgetConfig = {};
   try { if (dash.user?.budget_config_json) budgetConfig = JSON.parse(dash.user.budget_config_json); } catch(e){}
 
-  if (!categories.length) { tbody.innerHTML = '<tr><td colspan="5" class="text-center text-ink-light py-8">Sin gastos este mes</td></tr>'; return; }
+  if (!categories.length) {
+    container.innerHTML = '<p class="text-center text-ink-light py-8">Sin gastos este mes</p>';
+    return;
+  }
 
-  tbody.innerHTML = categories.map(c => {
+  container.innerHTML = categories.map(c => {
     const spent = Number(c.total);
     const catBudget = budgetConfig[c.category] ? Number(budgetConfig[c.category].amount) : 0;
     const pct = catBudget > 0 ? Math.round((spent / catBudget) * 100) : 0;
     const barColor = pct >= 120 ? 'bg-red-500' : pct >= 80 ? 'bg-amber-400' : 'bg-brand-500';
-    const textColor = pct >= 120 ? 'text-red-500 font-semibold' : pct >= 80 ? 'text-amber-600' : 'text-ink-muted';
-    return `<tr class="border-b border-surface-low hover:bg-surface-low/50 transition-colors">
-      <td class="py-3"><div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${getColor(c.category)}"></span><span class="font-medium">${c.category.charAt(0).toUpperCase() + c.category.slice(1)}</span></div></td>
-      <td class="py-3 text-right font-semibold whitespace-nowrap">${fmtShort(spent, sym)}</td>
-      <td class="py-3 text-right text-ink-light whitespace-nowrap">${catBudget > 0 ? fmtShort(catBudget, sym) : '-'}</td>
-      <td class="py-3 text-right ${textColor}">${catBudget > 0 ? pct + '%' : '-'}</td>
-      <td class="py-3">${catBudget > 0 ? `<div class="w-full bg-surface-mid rounded-full h-1.5"><div class="${barColor} h-1.5 rounded-full" style="width:${Math.min(pct,100)}%"></div></div>` : ''}</td>
-    </tr>`;
+    const pctColor = pct >= 120 ? 'text-red-500' : pct >= 80 ? 'text-amber-600' : 'text-brand-600';
+    const overBadge = pct >= 100 ? `<span class="text-[10px] font-semibold bg-red-50 text-red-600 px-1.5 py-0.5 rounded-full">Excedido</span>` : '';
+
+    return `<div class="py-3 border-b border-surface-low last:border-0">
+      <div class="flex items-center justify-between mb-1.5">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${getColor(c.category)}"></span>
+          <span class="text-sm font-semibold truncate">${c.category.charAt(0).toUpperCase() + c.category.slice(1)}</span>
+          ${overBadge}
+        </div>
+        <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
+          <span class="text-sm font-bold">${fmtShort(spent, sym)}</span>
+          ${catBudget > 0 ? `<span class="text-xs text-ink-light">/ ${fmtShort(catBudget, sym)}</span>` : ''}
+        </div>
+      </div>
+      ${catBudget > 0 ? `<div class="flex items-center gap-2">
+        <div class="flex-1 bg-surface-mid rounded-full h-2">
+          <div class="${barColor} h-2 rounded-full transition-all duration-500" style="width:${Math.min(pct, 100)}%"></div>
+        </div>
+        <span class="text-xs font-semibold ${pctColor} w-10 text-right">${pct}%</span>
+      </div>` : ''}
+    </div>`;
   }).join('');
 }
 
