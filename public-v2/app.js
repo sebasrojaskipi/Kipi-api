@@ -648,7 +648,7 @@ function renderInsightStats() {
   const projEl = document.getElementById('ins-projection');
   const budget = Number(lastDash.monthly_budget) || 0;
   const projection = Number(lastDash.projection) || 0;
-  projEl.className = `text-xl lg:text-2xl font-bold ${projection > budget ? 'text-red-500' : 'text-ink'}`;
+  projEl.className = `text-sm sm:text-xl lg:text-2xl font-bold truncate ${projection > budget ? 'text-red-500' : 'text-ink'}`;
 }
 
 function renderInsightWarnings() {
