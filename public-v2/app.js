@@ -37,7 +37,10 @@ function fmt(amount, symbol) {
 }
 function fmtDate(dateStr) {
   if (!dateStr) return '-';
-  const d = new Date(dateStr + 'T00:00:00');
+  // Handle both "2026-04-02" and "2026-04-02T05:00:00.000Z" formats
+  const raw = String(dateStr).slice(0, 10);
+  const d = new Date(raw + 'T00:00:00');
+  if (isNaN(d)) return '-';
   return d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short' });
 }
 
