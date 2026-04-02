@@ -351,13 +351,13 @@ function renderStats(d) {
   spentEl.textContent = fmt(spent, sym);
   // Color based on budget proximity
   if (pct > 90) {
-    spentEl.className = 'text-xl lg:text-2xl font-bold text-red-500';
+    spentEl.className = 'text-base sm:text-xl lg:text-2xl font-bold truncate text-red-500';
     document.getElementById('spent-icon-bg').className = 'w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center';
   } else if (pct >= 60) {
-    spentEl.className = 'text-xl lg:text-2xl font-bold text-amber-500';
+    spentEl.className = 'text-base sm:text-xl lg:text-2xl font-bold truncate text-amber-500';
     document.getElementById('spent-icon-bg').className = 'w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center';
   } else {
-    spentEl.className = 'text-xl lg:text-2xl font-bold text-brand-600';
+    spentEl.className = 'text-base sm:text-xl lg:text-2xl font-bold truncate text-brand-600';
     document.getElementById('spent-icon-bg').className = 'w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center';
   }
   const bar = document.getElementById('s-bar');
@@ -387,12 +387,12 @@ function renderStats(d) {
   // Card 3: BALANCE
   const balanceEl = document.getElementById('s-balance');
   balanceEl.textContent = fmt(balance, sym);
-  balanceEl.className = `text-xl lg:text-2xl font-bold ${balance >= 0 ? 'text-brand-600' : 'text-red-500'}`;
+  balanceEl.className = `text-base sm:text-xl lg:text-2xl font-bold truncate ${balance >= 0 ? 'text-brand-600' : 'text-red-500'}`;
 
   // Card 4: AHORRO
   const savingEl = document.getElementById('s-saving');
   savingEl.textContent = fmt(saving, sym);
-  savingEl.className = `text-xl lg:text-2xl font-bold ${saving >= 0 ? 'text-brand-600' : 'text-red-500'}`;
+  savingEl.className = `text-base sm:text-xl lg:text-2xl font-bold truncate ${saving >= 0 ? 'text-brand-600' : 'text-red-500'}`;
   document.getElementById('s-saving-detail').textContent = saving >= 0 ? 'Ahorraste vs presupuesto' : 'Excediste tu presupuesto';
 }
 
