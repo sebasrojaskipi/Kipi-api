@@ -782,8 +782,8 @@ function renderWeekdayChart(gastos) {
   const totals = [0,0,0,0,0,0,0];
   gastos.forEach(tx => {
     if (tx.transaction_date) {
-      const d = new Date(tx.transaction_date + 'T00:00:00');
-      totals[d.getDay()] += Number(tx.amount);
+      const d = new Date(String(tx.transaction_date).slice(0, 10) + 'T00:00:00');
+      if (!isNaN(d)) totals[d.getDay()] += Number(tx.amount);
     }
   });
   const maxVal = Math.max(...totals, 1);
@@ -840,7 +840,7 @@ function renderCumulativeChart(gastos) {
   const dailyTotals = {};
   gastos.forEach(tx => {
     if (tx.transaction_date) {
-      const day = new Date(tx.transaction_date + 'T00:00:00').getDate();
+      const day = new Date(String(tx.transaction_date).slice(0, 10) + 'T00:00:00').getDate();
       dailyTotals[day] = (dailyTotals[day] || 0) + Number(tx.amount);
     }
   });
