@@ -35,6 +35,10 @@ function fmt(amount, symbol) {
   symbol = symbol || 'S/';
   return `${symbol} ${Number(amount).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
+function fmtShort(amount, symbol) {
+  symbol = symbol || 'S/';
+  return `${symbol} ${Math.round(Number(amount)).toLocaleString('es-PE')}`;
+}
 function fmtDate(dateStr) {
   if (!dateStr) return '-';
   // Handle both "2026-04-02" and "2026-04-02T05:00:00.000Z" formats
@@ -503,8 +507,8 @@ function renderCategoryTable(dash) {
     const textColor = pct >= 120 ? 'text-red-500 font-semibold' : pct >= 80 ? 'text-amber-600' : 'text-ink-muted';
     return `<tr class="border-b border-surface-low hover:bg-surface-low/50 transition-colors">
       <td class="py-3"><div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${getColor(c.category)}"></span><span class="font-medium">${c.category.charAt(0).toUpperCase() + c.category.slice(1)}</span></div></td>
-      <td class="py-3 text-right font-semibold">${fmt(spent, sym)}</td>
-      <td class="py-3 text-right text-ink-light">${catBudget > 0 ? fmt(catBudget, sym) : '-'}</td>
+      <td class="py-3 text-right font-semibold whitespace-nowrap">${fmtShort(spent, sym)}</td>
+      <td class="py-3 text-right text-ink-light whitespace-nowrap">${catBudget > 0 ? fmtShort(catBudget, sym) : '-'}</td>
       <td class="py-3 text-right ${textColor}">${catBudget > 0 ? pct + '%' : '-'}</td>
       <td class="py-3">${catBudget > 0 ? `<div class="w-full bg-surface-mid rounded-full h-1.5"><div class="${barColor} h-1.5 rounded-full" style="width:${Math.min(pct,100)}%"></div></div>` : ''}</td>
     </tr>`;
