@@ -24,7 +24,9 @@ app.use(cors());
 app.use(express.json());
 
 // ─── Dashboard (static files) ───
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve redesigned dashboard from public-v2, keep legacy at /legacy
+app.use(express.static(path.join(__dirname, 'public-v2')));
+app.use('/legacy', express.static(path.join(__dirname, 'public')));
 
 // ─── Health check ───
 app.get('/health', (req, res) => {
@@ -35,11 +37,121 @@ app.get('/health', (req, res) => {
 app.get('/api/users', async (req, res) => {
   try {
     const [rows] = await pool.query(
-      'SELECT id, name, nickname, phone_number, currency_symbol, is_premium, premium_until FROM user_profile ORDER BY name'
+      `SELECT id, name, nickname, phone_number, currency_symbol, is_premium, premium_until,
+              (dashboard_password IS NOT NULL AND dashboard_password != '') AS has_password
+       FROM user_profile ORDER BY name`
     );
     res.json(rows);
   } catch (err) {
     console.error('Error GET /api/users:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// ═══════════════════════════════════════════
+// AUTENTICACIÓN DASHBOARD
+// ═══════════════════════════════════════════
+
+// POST /api/auth/lookup — Buscar usuario por número de teléfono
+app.post('/api/auth/lookup', async (req, res) => {
+  try {
+    const { phone } = req.body;
+    if (!phone) {
+      return res.status(400).json({ error: 'Número de teléfono requerido' });
+    }
+
+    // Normalize: remove spaces, dashes, and leading +
+    const normalized = phone.replace(/[\s\-]/g, '').replace(/^\+/, '');
+
+    const [rows] = await pool.query(
+      `SELECT id, name, nickname, phone_number, currency_symbol, is_premium,
+              (dashboard_password IS NOT NULL AND dashboard_password != '') AS has_password
+       FROM user_profile
+       WHERE REPLACE(REPLACE(REPLACE(phone_number, ' ', ''), '-', ''), '+', '') = ?`,
+      [normalized]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'No encontramos una cuenta con ese número. Asegúrate de usar el mismo número registrado en WhatsApp.' });
+    }
+
+    const user = rows[0];
+    res.json(user);
+  } catch (err) {
+    console.error('Error POST /api/auth/lookup:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// POST /api/auth/login — Login con contraseña (o crearla si es primera vez)
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { user_id, password } = req.body;
+
+    if (!user_id || !password) {
+      return res.status(400).json({ error: 'user_id y password son requeridos' });
+    }
+
+    if (password.length < 4) {
+      return res.status(400).json({ error: 'La contraseña debe tener mínimo 4 caracteres' });
+    }
+
+    const [rows] = await pool.query(
+      'SELECT id, name, nickname, phone_number, currency_symbol, is_premium, dashboard_password FROM user_profile WHERE id = ?',
+      [user_id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    const user = rows[0];
+    const storedPassword = user.dashboard_password;
+
+    if (!storedPassword || storedPassword === '') {
+      // First time: set the password
+      await pool.query(
+        'UPDATE user_profile SET dashboard_password = ? WHERE id = ?',
+        [password, user_id]
+      );
+      delete user.dashboard_password;
+      return res.json({ message: 'Contraseña creada exitosamente', user });
+    }
+
+    // Verify password
+    if (password !== storedPassword) {
+      return res.status(401).json({ error: 'Contraseña incorrecta' });
+    }
+
+    delete user.dashboard_password;
+    res.json({ message: 'Login exitoso', user });
+  } catch (err) {
+    console.error('Error POST /api/auth/login:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// POST /api/auth/change-password — Cambiar contraseña del dashboard
+app.post('/api/auth/change-password', async (req, res) => {
+  try {
+    const { user_id, new_password } = req.body;
+
+    if (!user_id || !new_password) {
+      return res.status(400).json({ error: 'user_id y new_password son requeridos' });
+    }
+
+    if (new_password.length < 4) {
+      return res.status(400).json({ error: 'La contraseña debe tener mínimo 4 caracteres' });
+    }
+
+    await pool.query(
+      'UPDATE user_profile SET dashboard_password = ? WHERE id = ?',
+      [new_password, user_id]
+    );
+
+    res.json({ message: 'Contraseña actualizada exitosamente' });
+  } catch (err) {
+    console.error('Error POST /api/auth/change-password:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
@@ -256,6 +368,36 @@ app.get('/api/dashboard/:userId', async (req, res) => {
     const remaining = budget - totalSpent;
     const daysRemaining = daysInMonth - daysPassed;
 
+    // 8. Previous month comparison data
+    const [prevYear, prevMon] = mon === 1 ? [year - 1, 12] : [year, mon - 1];
+    const prevMonth = `${prevYear}-${String(prevMon).padStart(2, '0')}`;
+
+    const [prevSpentRows] = await pool.query(
+      `SELECT COALESCE(SUM(amount), 0) AS total_spent
+       FROM user_transactions
+       WHERE user_id = ? AND type = 'gasto'
+       AND DATE_FORMAT(transaction_date, "%Y-%m") = ?`,
+      [userId, prevMonth]
+    );
+
+    const [prevIncomeRows] = await pool.query(
+      `SELECT COALESCE(SUM(amount), 0) AS total_income
+       FROM user_transactions
+       WHERE user_id = ? AND type = 'ingreso'
+       AND DATE_FORMAT(transaction_date, "%Y-%m") = ?`,
+      [userId, prevMonth]
+    );
+
+    const [prevCategoryRows] = await pool.query(
+      `SELECT category, COALESCE(SUM(amount), 0) AS total
+       FROM user_transactions
+       WHERE user_id = ? AND type = 'gasto'
+       AND DATE_FORMAT(transaction_date, "%Y-%m") = ?
+       GROUP BY category
+       ORDER BY total DESC`,
+      [userId, prevMonth]
+    );
+
     res.json({
       user: {
         id: user.id,
@@ -284,6 +426,9 @@ app.get('/api/dashboard/:userId', async (req, res) => {
       over_budget: projection > budget ? Math.round((projection - budget) * 100) / 100 : 0,
       categories: categoryRows,
       recent_transactions: recentRows,
+      prev_month_spent: parseFloat(prevSpentRows[0].total_spent),
+      prev_month_income: parseFloat(prevIncomeRows[0].total_income),
+      prev_month_categories: prevCategoryRows,
     });
   } catch (err) {
     console.error('Error GET /api/dashboard:', err);
@@ -384,8 +529,49 @@ app.get('/api/stats/:userId/categories', async (req, res) => {
   }
 });
 
+// GET /api/stats/:userId/subcategories — Gasto por subcategoría por mes
+app.get('/api/stats/:userId/subcategories', async (req, res) => {
+  try {
+    const month = req.query.month || peruMonth();
+    const [rows] = await pool.query(
+      `SELECT subcategory, COALESCE(SUM(amount), 0) AS total, COUNT(*) as count
+       FROM user_transactions
+       WHERE user_id = ? AND type = 'gasto'
+       AND DATE_FORMAT(transaction_date, "%Y-%m") = ?
+       AND subcategory IS NOT NULL AND subcategory != ''
+       GROUP BY subcategory
+       ORDER BY total DESC
+       LIMIT 10`,
+      [req.params.userId, month]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('Error GET /api/stats/subcategories:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// ─── Migraciones automáticas ───
+async function runMigrations() {
+  try {
+    // Agregar columna dashboard_password si no existe
+    await pool.query(`
+      SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_NAME = 'user_profile' AND COLUMN_NAME = 'dashboard_password'
+    `).then(async ([rows]) => {
+      if (rows.length === 0) {
+        await pool.query('ALTER TABLE user_profile ADD COLUMN dashboard_password VARCHAR(255) NULL');
+        console.log('✅ Columna dashboard_password agregada a user_profile');
+      }
+    });
+  } catch (err) {
+    console.error('Migración warning:', err.message);
+  }
+}
+
 // ─── Iniciar servidor ───
 app.listen(PORT, async () => {
   console.log(`🚀 Kipi API corriendo en puerto ${PORT}`);
   await testConnection();
+  await runMigrations();
 });
