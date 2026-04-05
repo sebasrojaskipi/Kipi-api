@@ -921,7 +921,10 @@ async function loadProfile() {
     renderCategoryBudgetInputs(budgetConfig, parseFloat(user.monthly_budget) || 0);
 
     // When monthly budget changes, redistribute categories keeping percentages
-    document.getElementById('prof-budget').addEventListener('input', onBudgetTotalChange);
+    // Remove old listener first to prevent accumulation across view switches
+    const budgetInput = document.getElementById('prof-budget');
+    budgetInput.removeEventListener('input', onBudgetTotalChange);
+    budgetInput.addEventListener('input', onBudgetTotalChange);
 
     document.getElementById('prof-success').classList.add('hidden');
   } catch(e) { console.error('Profile error:', e); }
