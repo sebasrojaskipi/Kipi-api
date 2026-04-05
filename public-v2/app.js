@@ -1024,19 +1024,23 @@ async function saveProfile() {
   const budgetVal = parseFloat(document.getElementById('prof-budget').value) || 0;
   if (budgetVal > 0) {
     let catTotal = 0;
-    document.querySelectorAll('#prof-cat-list input[data-category]').forEach(input => {
+    const catInputs = document.querySelectorAll('#prof-cat-list input[data-category]');
+    catInputs.forEach(input => {
       catTotal += parseFloat(input.value) || 0;
     });
-    const diff = Math.abs(budgetVal - catTotal);
-    if (diff > 1) { // tolerance of 1 for rounding
-      const msgEl = document.getElementById('prof-success');
-      msgEl.textContent = catTotal > budgetVal
-        ? `Las categorías suman ${fmtShort(catTotal, currentUser.symbol)}, te excedes por ${fmtShort(catTotal - budgetVal, currentUser.symbol)}. Ajusta las categorías.`
-        : `Las categorías suman ${fmtShort(catTotal, currentUser.symbol)}, faltan ${fmtShort(budgetVal - catTotal, currentUser.symbol)} por asignar.`;
-      msgEl.className = 'text-red-500 text-sm text-center flex items-center justify-center gap-1';
-      msgEl.classList.remove('hidden');
-      setTimeout(() => msgEl.classList.add('hidden'), 5000);
-      return;
+    // Only validate if user has assigned something to categories
+    if (catTotal > 0) {
+      const diff = budgetVal - catTotal;
+      if (Math.abs(diff) > 1) {
+        const msgEl = document.getElementById('prof-success');
+        msgEl.textContent = diff < 0
+          ? `Las categorías suman ${fmtShort(catTotal, currentUser.symbol)}, te excedes por ${fmtShort(-diff, currentUser.symbol)}. Ajusta las categorías.`
+          : `Faltan ${fmtShort(diff, currentUser.symbol)} por asignar a categorías.`;
+        msgEl.className = 'text-red-500 text-sm text-center flex items-center justify-center gap-1';
+        msgEl.classList.remove('hidden');
+        setTimeout(() => msgEl.classList.add('hidden'), 5000);
+        return;
+      }
     }
   }
 
