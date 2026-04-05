@@ -276,7 +276,13 @@ function setupMonthSelect() {
     const label = d.toLocaleDateString('es-PE', { month: 'long', year: 'numeric' });
     sel.innerHTML += `<option value="${val}" ${val === currentMonth ? 'selected' : ''}>${label.charAt(0).toUpperCase() + label.slice(1)}</option>`;
   }
-  sel.onchange = () => { currentMonth = sel.value; loadDashboard(); };
+  sel.onchange = () => {
+    currentMonth = sel.value;
+    loadDashboard();
+    // If insights view is active, reload it too
+    const insightsView = document.getElementById('view-insights');
+    if (insightsView && insightsView.classList.contains('active')) loadInsights();
+  };
 }
 
 let lastDash = null;
@@ -909,6 +915,22 @@ async function loadProfile() {
     document.getElementById('prof-currency').value = `${user.currency_symbol || 'S/'} (${user.currency_name || 'Soles'})`;
     document.getElementById('prof-budget').value = user.monthly_budget || '';
 
+    // Load category budgets
+    let budgetConfig = {};
+    try { if (user.budget_config_json) budgetConfig = JSON.parse(user.budget_config_json); } catch(e) {}
+    const defaultCategories = ['comida', 'transporte', 'hogar', 'entretenimiento', 'compras', 'salud', 'educacion / trabajo', 'otros'];
+    const catList = document.getElementById('prof-cat-list');
+    catList.innerHTML = defaultCategories.map(cat => {
+      const catAmount = budgetConfig[cat] ? budgetConfig[cat].amount : '';
+      const catName = cat.charAt(0).toUpperCase() + cat.slice(1);
+      return `<div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${getColor(cat)}"></span>
+        <label class="text-sm text-ink flex-1 min-w-0 truncate">${catName}</label>
+        <input type="number" data-category="${cat}" value="${catAmount}" placeholder="0"
+          class="w-24 border border-surface-high rounded-lg px-3 py-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-brand-500" />
+      </div>`;
+    }).join('');
+
     document.getElementById('prof-success').classList.add('hidden');
   } catch(e) { console.error('Profile error:', e); }
 }
@@ -918,15 +940,36 @@ async function saveProfile() {
   const btn = document.getElementById('prof-save-btn');
   btn.disabled = true; btn.textContent = 'Guardando...';
   try {
+    const budgetVal = parseFloat(document.getElementById('prof-budget').value) || 0;
     const body = {
       name: document.getElementById('prof-fullname').value.trim(),
       nickname: document.getElementById('prof-nickname').value.trim(),
       email: document.getElementById('prof-email').value.trim(),
-      monthly_budget: parseFloat(document.getElementById('prof-budget').value) || undefined,
+      monthly_budget: budgetVal || undefined,
     };
     const resp = await fetch(`${API}/api/user/${currentUser.id}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
     });
+
+    // Collect category budgets and save via budget endpoint
+    const catInputs = document.querySelectorAll('#prof-cat-list input[data-category]');
+    const newBudgetConfig = {};
+    catInputs.forEach(input => {
+      const amount = parseFloat(input.value) || 0;
+      if (amount > 0) {
+        newBudgetConfig[input.dataset.category] = { amount };
+      }
+    });
+    if (budgetVal > 0 || Object.keys(newBudgetConfig).length > 0) {
+      await fetch(`${API}/api/budget/${currentUser.id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          monthly_budget: budgetVal,
+          budget_config_json: JSON.stringify(newBudgetConfig),
+        }),
+      });
+    }
+
     if (resp.ok) {
       const updated = await resp.json();
       currentUser.name = updated.nickname || updated.name;
@@ -1025,6 +1068,9 @@ async function loadSubscription() {
         </div>
       `;
     }
+    // Update plan comparison badges
+    document.getElementById('plan-free-badge').classList.toggle('hidden', !!isPremium);
+    document.getElementById('plan-premium-badge').classList.toggle('hidden', !isPremium);
   } catch(e) { console.error('Subscription error:', e); }
 }
 

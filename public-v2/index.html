@@ -431,6 +431,11 @@
               <input id="prof-budget" type="number" class="w-full border border-surface-high rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
             </div>
           </div>
+          <!-- Category Budgets -->
+          <div id="prof-categories" class="mt-4">
+            <label class="text-xs font-semibold text-ink-light uppercase tracking-wider mb-2 block">Presupuesto por categoria</label>
+            <div id="prof-cat-list" class="space-y-2"></div>
+          </div>
           <button onclick="saveProfile()" id="prof-save-btn"
             class="w-full bg-brand-500 hover:bg-brand-600 text-white font-bold py-3 rounded-xl transition-colors mt-2 flex items-center justify-center gap-2">
             <span class="material-symbols-outlined text-lg">save</span>
@@ -483,7 +488,8 @@
 
         <div class="grid grid-cols-2 gap-4">
           <!-- Free -->
-          <div class="border border-surface-high rounded-xl p-4">
+          <div class="border border-surface-high rounded-xl p-4 relative">
+            <span id="plan-free-badge" class="hidden absolute -top-2.5 right-3 bg-ink-muted text-white text-[10px] font-bold px-2 py-0.5 rounded-full">ACTUAL</span>
             <div class="font-headline font-bold mb-1">Free</div>
             <div class="text-2xl font-extrabold font-headline mb-4">Gratis</div>
             <div class="space-y-2 text-xs text-ink-muted">
@@ -498,7 +504,7 @@
           </div>
           <!-- Premium -->
           <div class="border-2 border-brand-500 rounded-xl p-4 relative">
-            <span class="absolute -top-2.5 right-3 bg-brand-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">ACTUAL</span>
+            <span id="plan-premium-badge" class="hidden absolute -top-2.5 right-3 bg-brand-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">ACTUAL</span>
             <div class="font-headline font-bold text-brand-700 mb-1">Premium</div>
             <div class="text-xl sm:text-2xl font-extrabold font-headline mb-4 whitespace-nowrap">S/ 14.90<span class="text-xs font-normal text-ink-light">/mes</span></div>
             <div class="space-y-2 text-xs text-ink-muted">

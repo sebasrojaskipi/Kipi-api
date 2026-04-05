@@ -305,6 +305,25 @@ app.get('/api/dashboard/:userId', async (req, res) => {
     }
     const user = userRows[0];
 
+    // Determine budget for the requested month
+    // For current month, use user_profile. For past months, check budget_history.
+    let effectiveBudget = parseFloat(user.monthly_budget) || 0;
+    let effectiveBudgetConfig = user.budget_config_json || null;
+
+    const currentPeriod = peruMonth();
+    if (month !== currentPeriod) {
+      const [historyRows] = await pool.query(
+        `SELECT monthly_budget, budget_config_json FROM budget_history
+         WHERE user_id = ? AND DATE_FORMAT(changed_at, "%Y-%m") <= ?
+         ORDER BY changed_at DESC LIMIT 1`,
+        [userId, month]
+      );
+      if (historyRows.length > 0) {
+        effectiveBudget = parseFloat(historyRows[0].monthly_budget) || effectiveBudget;
+        effectiveBudgetConfig = historyRows[0].budget_config_json || effectiveBudgetConfig;
+      }
+    }
+
     // 2. Total gastado este mes
     const [spentRows] = await pool.query(
       `SELECT COALESCE(SUM(amount), 0) AS total_spent
@@ -364,7 +383,7 @@ app.get('/api/dashboard/:userId', async (req, res) => {
     const totalSpent = parseFloat(spentRows[0].total_spent);
     const dailyAvg = daysPassed > 0 ? totalSpent / daysPassed : 0;
     const projection = Math.round(dailyAvg * daysInMonth * 100) / 100;
-    const budget = parseFloat(user.monthly_budget);
+    const budget = effectiveBudget;
     const remaining = budget - totalSpent;
     const daysRemaining = daysInMonth - daysPassed;
 
@@ -407,7 +426,7 @@ app.get('/api/dashboard/:userId', async (req, res) => {
         phone_number: user.phone_number,
         currency_symbol: user.currency_symbol || 'S/',
         currency_name: user.currency_name || 'Soles',
-        budget_config_json: user.budget_config_json || null,
+        budget_config_json: effectiveBudgetConfig,
         is_premium: user.is_premium || 0,
         premium_until: user.premium_until || null,
       },
