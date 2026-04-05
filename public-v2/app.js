@@ -1019,10 +1019,30 @@ function updateCategoryTotals() {
 
 async function saveProfile() {
   if (!currentUser) return;
+
+  // Validate budget categories match total
+  const budgetVal = parseFloat(document.getElementById('prof-budget').value) || 0;
+  if (budgetVal > 0) {
+    let catTotal = 0;
+    document.querySelectorAll('#prof-cat-list input[data-category]').forEach(input => {
+      catTotal += parseFloat(input.value) || 0;
+    });
+    const diff = Math.abs(budgetVal - catTotal);
+    if (diff > 1) { // tolerance of 1 for rounding
+      const msgEl = document.getElementById('prof-success');
+      msgEl.textContent = catTotal > budgetVal
+        ? `Las categorías suman ${fmtShort(catTotal, currentUser.symbol)}, te excedes por ${fmtShort(catTotal - budgetVal, currentUser.symbol)}. Ajusta las categorías.`
+        : `Las categorías suman ${fmtShort(catTotal, currentUser.symbol)}, faltan ${fmtShort(budgetVal - catTotal, currentUser.symbol)} por asignar.`;
+      msgEl.className = 'text-red-500 text-sm text-center flex items-center justify-center gap-1';
+      msgEl.classList.remove('hidden');
+      setTimeout(() => msgEl.classList.add('hidden'), 5000);
+      return;
+    }
+  }
+
   const btn = document.getElementById('prof-save-btn');
   btn.disabled = true; btn.textContent = 'Guardando...';
   try {
-    const budgetVal = parseFloat(document.getElementById('prof-budget').value) || 0;
     const body = {
       name: document.getElementById('prof-fullname').value.trim(),
       nickname: document.getElementById('prof-nickname').value.trim(),
