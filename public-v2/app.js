@@ -918,21 +918,103 @@ async function loadProfile() {
     // Load category budgets
     let budgetConfig = {};
     try { if (user.budget_config_json) budgetConfig = JSON.parse(user.budget_config_json); } catch(e) {}
-    const defaultCategories = ['comida', 'transporte', 'hogar', 'entretenimiento', 'compras', 'salud', 'educacion / trabajo', 'otros'];
-    const catList = document.getElementById('prof-cat-list');
-    catList.innerHTML = defaultCategories.map(cat => {
-      const catAmount = budgetConfig[cat] ? budgetConfig[cat].amount : '';
-      const catName = cat.charAt(0).toUpperCase() + cat.slice(1);
-      return `<div class="flex items-center gap-2">
-        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${getColor(cat)}"></span>
-        <label class="text-sm text-ink flex-1 min-w-0 truncate">${catName}</label>
-        <input type="number" data-category="${cat}" value="${catAmount}" placeholder="0"
-          class="w-24 border border-surface-high rounded-lg px-3 py-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-brand-500" />
-      </div>`;
-    }).join('');
+    renderCategoryBudgetInputs(budgetConfig, parseFloat(user.monthly_budget) || 0);
+
+    // When monthly budget changes, redistribute categories keeping percentages
+    document.getElementById('prof-budget').addEventListener('input', onBudgetTotalChange);
 
     document.getElementById('prof-success').classList.add('hidden');
   } catch(e) { console.error('Profile error:', e); }
+}
+
+// Default percentages matching the chatbot logic
+const DEFAULT_PERCENTS = {
+  'comida': 25, 'transporte': 10, 'hogar': 30, 'entretenimiento': 10,
+  'compras': 10, 'salud': 5, 'educacion / trabajo': 5, 'otros': 5,
+};
+const BUDGET_CATEGORIES = Object.keys(DEFAULT_PERCENTS);
+
+function renderCategoryBudgetInputs(budgetConfig, monthlyBudget) {
+  const catList = document.getElementById('prof-cat-list');
+  catList.innerHTML = BUDGET_CATEGORIES.map(cat => {
+    const data = budgetConfig[cat] || {};
+    const catAmount = data.amount != null ? Math.round(data.amount) : '';
+    const catName = cat.charAt(0).toUpperCase() + cat.slice(1);
+    const isOtros = cat === 'otros';
+    return `<div class="flex items-center gap-2">
+      <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${getColor(cat)}"></span>
+      <label class="text-sm text-ink flex-1 min-w-0 truncate">${catName}</label>
+      <input type="number" data-category="${cat}" value="${catAmount}" placeholder="0"
+        ${isOtros ? 'readonly' : ''}
+        class="w-24 border border-surface-high rounded-lg px-3 py-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-brand-500 ${isOtros ? 'bg-surface-low text-ink-muted' : ''}" />
+    </div>`;
+  }).join('');
+
+  // Add input listeners to non-otros categories
+  catList.querySelectorAll('input[data-category]').forEach(input => {
+    if (input.dataset.category !== 'otros') {
+      input.addEventListener('input', onCategoryAmountChange);
+    }
+  });
+  updateCategoryTotals();
+}
+
+function onBudgetTotalChange() {
+  const newBudget = parseFloat(document.getElementById('prof-budget').value) || 0;
+  if (newBudget <= 0) return;
+
+  // Recalculate each category keeping percentages
+  const inputs = document.querySelectorAll('#prof-cat-list input[data-category]');
+  // Get current percentages or use defaults
+  let totalCurrent = 0;
+  const amounts = {};
+  inputs.forEach(input => {
+    amounts[input.dataset.category] = parseFloat(input.value) || 0;
+    totalCurrent += amounts[input.dataset.category];
+  });
+
+  inputs.forEach(input => {
+    const cat = input.dataset.category;
+    const pct = totalCurrent > 0 ? (amounts[cat] / totalCurrent) * 100 : DEFAULT_PERCENTS[cat];
+    input.value = Math.round(newBudget * pct / 100);
+  });
+  updateCategoryTotals();
+}
+
+function onCategoryAmountChange() {
+  // Sum all non-otros categories, put residual in otros
+  const budget = parseFloat(document.getElementById('prof-budget').value) || 0;
+  let totalNonOtros = 0;
+  document.querySelectorAll('#prof-cat-list input[data-category]').forEach(input => {
+    if (input.dataset.category !== 'otros') {
+      totalNonOtros += parseFloat(input.value) || 0;
+    }
+  });
+  const otrosInput = document.querySelector('#prof-cat-list input[data-category="otros"]');
+  if (otrosInput) {
+    otrosInput.value = Math.max(0, Math.round(budget - totalNonOtros));
+  }
+  updateCategoryTotals();
+}
+
+function updateCategoryTotals() {
+  const budget = parseFloat(document.getElementById('prof-budget').value) || 0;
+  const sym = currentUser?.symbol || 'S/';
+  let total = 0;
+  document.querySelectorAll('#prof-cat-list input[data-category]').forEach(input => {
+    total += parseFloat(input.value) || 0;
+  });
+  const remaining = budget - total;
+  const pct = budget > 0 ? Math.min((total / budget) * 100, 100) : 0;
+
+  document.getElementById('prof-cat-total').textContent = fmtShort(total, sym);
+  const remEl = document.getElementById('prof-cat-remaining');
+  remEl.textContent = fmtShort(remaining, sym);
+  remEl.className = `text-sm font-bold ${remaining < 0 ? 'text-red-500' : 'text-brand-600'}`;
+
+  const bar = document.getElementById('prof-cat-bar');
+  bar.style.width = pct + '%';
+  bar.className = `h-1.5 rounded-full transition-all duration-300 ${pct >= 100 ? 'bg-red-500' : pct >= 80 ? 'bg-amber-400' : 'bg-brand-500'}`;
 }
 
 async function saveProfile() {
@@ -951,16 +1033,15 @@ async function saveProfile() {
       method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
     });
 
-    // Collect category budgets and save via budget endpoint
+    // Collect category budgets with percentages (matching bot format)
     const catInputs = document.querySelectorAll('#prof-cat-list input[data-category]');
     const newBudgetConfig = {};
     catInputs.forEach(input => {
       const amount = parseFloat(input.value) || 0;
-      if (amount > 0) {
-        newBudgetConfig[input.dataset.category] = { amount };
-      }
+      const percent = budgetVal > 0 ? (amount / budgetVal) * 100 : 0;
+      newBudgetConfig[input.dataset.category] = { amount, percent };
     });
-    if (budgetVal > 0 || Object.keys(newBudgetConfig).length > 0) {
+    if (budgetVal > 0) {
       await fetch(`${API}/api/budget/${currentUser.id}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -433,8 +433,22 @@
           </div>
           <!-- Category Budgets -->
           <div id="prof-categories" class="mt-4">
-            <label class="text-xs font-semibold text-ink-light uppercase tracking-wider mb-2 block">Presupuesto por categoria</label>
+            <label class="text-xs font-semibold text-ink-light uppercase tracking-wider mb-2 block">Presupuesto por categoría</label>
             <div id="prof-cat-list" class="space-y-2"></div>
+            <div class="mt-3 p-3 bg-surface-low rounded-xl">
+              <div class="flex justify-between items-center">
+                <span class="text-xs font-semibold text-ink-muted">Total asignado:</span>
+                <span id="prof-cat-total" class="text-sm font-bold text-ink">S/ 0</span>
+              </div>
+              <div class="flex justify-between items-center mt-1">
+                <span class="text-xs font-semibold text-ink-muted">Falta por asignar:</span>
+                <span id="prof-cat-remaining" class="text-sm font-bold text-brand-600">S/ 0</span>
+              </div>
+              <div class="w-full bg-surface-mid rounded-full h-1.5 mt-2">
+                <div id="prof-cat-bar" class="bg-brand-500 h-1.5 rounded-full transition-all duration-300" style="width:0%"></div>
+              </div>
+            </div>
+            <p class="text-[11px] text-ink-light mt-2">Si no vas a usar una categoría, colócale 0. El residuo se asigna a "Otros".</p>
           </div>
           <button onclick="saveProfile()" id="prof-save-btn"
             class="w-full bg-brand-500 hover:bg-brand-600 text-white font-bold py-3 rounded-xl transition-colors mt-2 flex items-center justify-center gap-2">
