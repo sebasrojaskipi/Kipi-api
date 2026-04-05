@@ -94,6 +94,19 @@ document.addEventListener('DOMContentLoaded', () => {
   setupPhoneForm();
   setupPasswordForm();
   setupFaq();
+
+  // Restore session if exists
+  try {
+    const saved = localStorage.getItem('kipi_session');
+    if (saved) {
+      const { userData, user } = JSON.parse(saved);
+      if (userData && userData.id !== undefined) {
+        enterDashboard(userData, user);
+        return;
+      }
+    }
+  } catch(e) { localStorage.removeItem('kipi_session'); }
+
   document.getElementById('phone-input').focus();
 });
 
@@ -229,6 +242,9 @@ function enterDashboard(userData, user) {
     is_premium: user?.is_premium || userData.is_premium,
   };
 
+  // Persist session
+  try { localStorage.setItem('kipi_session', JSON.stringify({ userData, user })); } catch(e) {}
+
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('dashboard-screen').classList.remove('hidden');
   document.getElementById('header-name').textContent = currentUser.name;
@@ -241,6 +257,7 @@ function enterDashboard(userData, user) {
 
 function logout() {
   currentUser = null; fullUserData = null; selectedUserData = null;
+  try { localStorage.removeItem('kipi_session'); } catch(e) {}
   document.getElementById('dashboard-screen').classList.add('hidden');
   document.getElementById('login-screen').classList.remove('hidden');
   document.getElementById('step-password').classList.add('hidden');
