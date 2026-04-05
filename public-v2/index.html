@@ -81,9 +81,26 @@
       <div id="step-phone" class="bg-white rounded-2xl border border-surface-high p-6">
         <label class="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-3 block">Tu número de teléfono</label>
         <form id="phone-form" autocomplete="off">
-          <input id="phone-input" type="tel" placeholder="Ej: 51987654321"
-            class="w-full border border-surface-high rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all" />
-          <p class="text-xs text-ink-light mt-2">Ingresa el número que usas en WhatsApp con KIPI (con código de país).</p>
+          <div class="flex gap-2">
+            <select id="country-code"
+              class="border border-surface-high rounded-xl px-2 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white min-w-[110px]">
+              <option value="51">🇵🇪 +51</option>
+              <option value="52">🇲🇽 +52</option>
+              <option value="54">🇦🇷 +54</option>
+              <option value="56">🇨🇱 +56</option>
+              <option value="57">🇨🇴 +57</option>
+              <option value="55">🇧🇷 +55</option>
+              <option value="593">🇪🇨 +593</option>
+              <option value="591">🇧🇴 +591</option>
+              <option value="598">🇺🇾 +598</option>
+              <option value="34">🇪🇸 +34</option>
+              <option value="1">🇺🇸 +1</option>
+              <option value="49">🇩🇪 +49</option>
+            </select>
+            <input id="phone-input" type="tel" placeholder="987654321"
+              class="flex-1 border border-surface-high rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all" />
+          </div>
+          <p class="text-xs text-ink-light mt-2">Selecciona tu país e ingresa tu número sin el código.</p>
           <div id="phone-error" class="hidden text-red-500 text-xs mt-2 flex items-center gap-1">
             <span class="material-symbols-outlined text-sm">error</span>
             <span id="phone-error-text"></span>

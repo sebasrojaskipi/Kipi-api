@@ -113,8 +113,11 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupPhoneForm() {
   document.getElementById('phone-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const phone = document.getElementById('phone-input').value.trim();
-    if (!phone) { showPhoneError('Ingresa tu número de teléfono'); return; }
+    const countryCode = document.getElementById('country-code').value;
+    const rawPhone = document.getElementById('phone-input').value.trim().replace(/[\s\-\+]/g, '');
+    if (!rawPhone) { showPhoneError('Ingresa tu número de teléfono'); return; }
+    // Si ya incluye el código de país, no duplicar
+    const phone = rawPhone.startsWith(countryCode) ? rawPhone : countryCode + rawPhone;
 
     const btnText = document.getElementById('phone-btn-text');
     const btnLoader = document.getElementById('phone-btn-loader');
