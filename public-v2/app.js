@@ -966,33 +966,53 @@ function onBudgetTotalChange() {
   const newBudget = parseFloat(document.getElementById('prof-budget').value) || 0;
   if (newBudget <= 0) return;
 
-  // Recalculate each category keeping percentages
+  // Recalcular con porcentajes BASE (no los actuales)
   const inputs = document.querySelectorAll('#prof-cat-list input[data-category]');
-  // Get current percentages or use defaults
-  let totalCurrent = 0;
-  const amounts = {};
-  inputs.forEach(input => {
-    amounts[input.dataset.category] = parseFloat(input.value) || 0;
-    totalCurrent += amounts[input.dataset.category];
-  });
-
   inputs.forEach(input => {
     const cat = input.dataset.category;
-    const pct = totalCurrent > 0 ? (amounts[cat] / totalCurrent) * 100 : DEFAULT_PERCENTS[cat];
+    const pct = DEFAULT_PERCENTS[cat] || 5;
     input.value = Math.round(newBudget * pct / 100);
   });
   updateCategoryTotals();
 }
 
-function onCategoryAmountChange() {
-  // Sum all non-otros categories, put residual in otros
+function onCategoryAmountChange(e) {
   const budget = parseFloat(document.getElementById('prof-budget').value) || 0;
+  const input = e?.target;
+
+  // Clampear: no permitir que una categoría exceda el presupuesto total
+  if (input && budget > 0) {
+    const val = parseFloat(input.value) || 0;
+    if (val > budget) {
+      input.value = Math.round(budget * 0.5); // resetear a 50% si se excede
+    }
+    if (val < 0) {
+      input.value = 0;
+    }
+  }
+
+  // Sumar non-otros y poner residuo en otros
   let totalNonOtros = 0;
-  document.querySelectorAll('#prof-cat-list input[data-category]').forEach(input => {
-    if (input.dataset.category !== 'otros') {
-      totalNonOtros += parseFloat(input.value) || 0;
+  document.querySelectorAll('#prof-cat-list input[data-category]').forEach(inp => {
+    if (inp.dataset.category !== 'otros') {
+      totalNonOtros += parseFloat(inp.value) || 0;
     }
   });
+
+  // Si non-otros excede presupuesto, clampear la categoría editada
+  if (totalNonOtros > budget && input && input.dataset.category !== 'otros') {
+    const excess = totalNonOtros - budget;
+    const currentVal = parseFloat(input.value) || 0;
+    input.value = Math.max(0, Math.round(currentVal - excess));
+    // Recalcular
+    totalNonOtros = 0;
+    document.querySelectorAll('#prof-cat-list input[data-category]').forEach(inp => {
+      if (inp.dataset.category !== 'otros') {
+        totalNonOtros += parseFloat(inp.value) || 0;
+      }
+    });
+  }
+
   const otrosInput = document.querySelector('#prof-cat-list input[data-category="otros"]');
   if (otrosInput) {
     otrosInput.value = Math.max(0, Math.round(budget - totalNonOtros));
@@ -1023,19 +1043,20 @@ function updateCategoryTotals() {
 async function saveProfile() {
   if (!currentUser) return;
 
-  // Validate budget categories match total — reuse the displayed totals to avoid mismatches
+  // Validate budget categories match total — read values directly from inputs
   const budgetVal = parseFloat(document.getElementById('prof-budget').value) || 0;
   if (budgetVal > 0) {
-    updateCategoryTotals(); // ensure display is fresh
-    const remainingText = document.getElementById('prof-cat-remaining').textContent;
-    const remaining = parseInt(remainingText.replace(/[^\d-]/g, ''), 10) || 0;
+    let catTotal = 0;
+    document.querySelectorAll('#prof-cat-list input[data-category]').forEach(input => {
+      catTotal += parseFloat(input.value) || 0;
+    });
+    const remaining = Math.round(budgetVal - catTotal);
     if (remaining !== 0) {
-      const totalText = document.getElementById('prof-cat-total').textContent;
-      const catTotal = parseInt(totalText.replace(/[^\d]/g, ''), 10) || 0;
+      const sym = currentUser?.symbol || 'S/';
       const msgEl = document.getElementById('prof-success');
       msgEl.textContent = remaining < 0
-        ? `Las categorías suman ${fmtShort(catTotal, currentUser.symbol)}, te excedes por ${fmtShort(-remaining, currentUser.symbol)}. Ajusta las categorías.`
-        : `Faltan ${fmtShort(remaining, currentUser.symbol)} por asignar a categorías.`;
+        ? `Las categorías suman ${fmtShort(catTotal, sym)}, te excedes por ${fmtShort(-remaining, sym)}. Ajusta las categorías.`
+        : `Faltan ${fmtShort(remaining, sym)} por asignar a categorías.`;
       msgEl.className = 'text-red-500 text-sm text-center flex items-center justify-center gap-1';
       msgEl.classList.remove('hidden');
       setTimeout(() => msgEl.classList.add('hidden'), 5000);
