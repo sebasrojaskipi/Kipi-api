@@ -146,7 +146,101 @@
             <span id="pw-btn-text">Ingresar</span>
             <div id="pw-btn-loader" class="loader hidden" style="width:18px;height:18px;border-width:2px"></div>
           </button>
+          <p id="forgot-pw-link" class="hidden text-center mt-3 text-xs text-brand-600 hover:text-brand-700 cursor-pointer transition-colors">
+            ¿Olvidaste tu contraseña?
+          </p>
         </form>
+      </div>
+
+      <!-- Step 3: Reset Password -->
+      <div id="step-reset" class="hidden bg-white rounded-2xl border border-surface-high p-6 fade-up">
+        <button id="reset-back-btn" class="flex items-center gap-1 text-sm text-ink-light hover:text-ink mb-4 transition-colors">
+          <span class="material-symbols-outlined text-lg">arrow_back</span>
+          Volver al login
+        </button>
+        <div class="text-center mb-5">
+          <span class="material-symbols-outlined text-4xl text-brand-500">lock_reset</span>
+          <h3 class="font-bold text-ink mt-2">Recuperar contraseña</h3>
+          <p class="text-xs text-ink-light mt-1">Ingresa tu número de celular para verificar tu cuenta y crear una nueva contraseña.</p>
+        </div>
+
+        <!-- Sub-step: verify phone -->
+        <div id="reset-phone-step">
+          <form id="reset-phone-form" autocomplete="off">
+            <label class="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2 block">Número de celular</label>
+            <div class="flex gap-2">
+              <select id="reset-country-code" class="border border-surface-high rounded-xl px-3 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500">
+                <option value="51">🇵🇪 +51</option>
+                <option value="52">🇲🇽 +52</option>
+                <option value="54">🇦🇷 +54</option>
+                <option value="56">🇨🇱 +56</option>
+                <option value="57">🇨🇴 +57</option>
+                <option value="55">🇧🇷 +55</option>
+                <option value="593">🇪🇨 +593</option>
+                <option value="591">🇧🇴 +591</option>
+                <option value="598">🇺🇾 +598</option>
+                <option value="34">🇪🇸 +34</option>
+                <option value="1">🇺🇸 +1</option>
+                <option value="49">🇩🇪 +49</option>
+              </select>
+              <input id="reset-phone-input" type="tel" placeholder="987 654 321"
+                class="flex-1 border border-surface-high rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all" />
+            </div>
+            <div id="reset-phone-error" class="hidden text-red-500 text-xs mt-2 flex items-center gap-1">
+              <span class="material-symbols-outlined text-sm">error</span>
+              <span id="reset-phone-error-text"></span>
+            </div>
+            <button type="submit" id="reset-phone-submit"
+              class="w-full mt-4 bg-brand-500 hover:bg-brand-600 text-white font-bold py-3 rounded-xl transition-colors shadow-sm shadow-brand-500/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+              <span id="reset-phone-btn-text">Verificar cuenta</span>
+              <div id="reset-phone-btn-loader" class="loader hidden" style="width:18px;height:18px;border-width:2px"></div>
+            </button>
+          </form>
+        </div>
+
+        <!-- Sub-step: new password -->
+        <div id="reset-newpw-step" class="hidden">
+          <div id="reset-user-info" class="flex items-center gap-3 mb-4 p-3 bg-surface-low rounded-xl">
+            <div id="reset-avatar" class="w-10 h-10 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-sm"></div>
+            <div>
+              <div id="reset-name" class="font-semibold text-sm"></div>
+              <div id="reset-phone" class="text-xs text-ink-light"></div>
+            </div>
+          </div>
+          <form id="reset-pw-form" autocomplete="off">
+            <label class="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2 block">Nueva contraseña</label>
+            <div class="relative">
+              <input id="reset-pw-input" type="password" placeholder="Mínimo 4 caracteres"
+                class="w-full border border-surface-high rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all" />
+              <span id="reset-pw-toggle" class="material-symbols-outlined pw-toggle text-xl">visibility_off</span>
+            </div>
+            <label class="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2 mt-3 block">Confirmar contraseña</label>
+            <div class="relative">
+              <input id="reset-pw-confirm" type="password" placeholder="Repite tu contraseña"
+                class="w-full border border-surface-high rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all" />
+              <span id="reset-pw-confirm-toggle" class="material-symbols-outlined pw-toggle text-xl">visibility_off</span>
+            </div>
+            <div id="reset-pw-error" class="hidden text-red-500 text-xs mt-2 flex items-center gap-1">
+              <span class="material-symbols-outlined text-sm">error</span>
+              <span id="reset-pw-error-text"></span>
+            </div>
+            <button type="submit" id="reset-pw-submit"
+              class="w-full mt-4 bg-brand-500 hover:bg-brand-600 text-white font-bold py-3 rounded-xl transition-colors shadow-sm shadow-brand-500/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+              <span id="reset-pw-btn-text">Cambiar contraseña</span>
+              <div id="reset-pw-btn-loader" class="loader hidden" style="width:18px;height:18px;border-width:2px"></div>
+            </button>
+          </form>
+        </div>
+
+        <!-- Success message -->
+        <div id="reset-success" class="hidden text-center py-4">
+          <span class="material-symbols-outlined text-4xl text-brand-500">check_circle</span>
+          <p class="font-bold text-ink mt-2">Contraseña actualizada</p>
+          <p class="text-xs text-ink-light mt-1">Ya puedes ingresar con tu nueva contraseña.</p>
+          <button id="reset-go-login" class="mt-4 bg-brand-500 hover:bg-brand-600 text-white font-bold py-3 px-6 rounded-xl transition-colors text-sm">
+            Ir al login
+          </button>
+        </div>
       </div>
 
       <p class="text-center mt-6 text-xs text-ink-light">

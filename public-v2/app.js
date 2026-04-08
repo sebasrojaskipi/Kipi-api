@@ -93,6 +93,7 @@ function switchView(view) {
 document.addEventListener('DOMContentLoaded', () => {
   setupPhoneForm();
   setupPasswordForm();
+  setupResetPasswordFlow();
   setupFaq();
 
   // Restore session if exists
@@ -173,6 +174,7 @@ function showPasswordStep(userData) {
   const hasPassword = userData.has_password;
   document.getElementById('pw-setup-hint').classList.toggle('hidden', !!hasPassword);
   document.getElementById('pw-btn-text').textContent = hasPassword ? 'Ingresar' : 'Crear contraseña e ingresar';
+  document.getElementById('forgot-pw-link').classList.toggle('hidden', !hasPassword);
 
   document.getElementById('step-phone').classList.add('hidden');
   document.getElementById('step-password').classList.remove('hidden');
@@ -229,6 +231,145 @@ function showPwError(msg) {
   const input = document.getElementById('pw-input');
   input.classList.add('ring-2', 'ring-red-400', 'border-red-400');
   setTimeout(() => input.classList.remove('ring-2', 'ring-red-400', 'border-red-400'), 1500);
+}
+
+// ═══════════════════════════════════════════
+// FORGOT PASSWORD FLOW
+// ═══════════════════════════════════════════
+
+let resetUserData = null;
+
+function setupResetPasswordFlow() {
+  // "¿Olvidaste tu contraseña?" link
+  document.getElementById('forgot-pw-link').addEventListener('click', () => {
+    document.getElementById('step-password').classList.add('hidden');
+    document.getElementById('step-reset').classList.remove('hidden');
+    document.getElementById('reset-phone-step').classList.remove('hidden');
+    document.getElementById('reset-newpw-step').classList.add('hidden');
+    document.getElementById('reset-success').classList.add('hidden');
+    document.getElementById('reset-phone-error').classList.add('hidden');
+    document.getElementById('reset-phone-input').value = '';
+    document.getElementById('reset-phone-input').focus();
+  });
+
+  // Back button
+  document.getElementById('reset-back-btn').addEventListener('click', () => {
+    document.getElementById('step-reset').classList.add('hidden');
+    document.getElementById('step-password').classList.remove('hidden');
+    document.getElementById('pw-input').focus();
+  });
+
+  // Step 1: Verify phone
+  document.getElementById('reset-phone-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const countryCode = document.getElementById('reset-country-code').value;
+    const rawPhone = document.getElementById('reset-phone-input').value.trim().replace(/[\s\-\+]/g, '');
+    if (!rawPhone) { showResetPhoneError('Ingresa tu número de teléfono'); return; }
+    const phone = rawPhone.startsWith(countryCode) ? rawPhone : countryCode + rawPhone;
+
+    const btnText = document.getElementById('reset-phone-btn-text');
+    const btnLoader = document.getElementById('reset-phone-btn-loader');
+    const submitBtn = document.getElementById('reset-phone-submit');
+    btnText.classList.add('hidden'); btnLoader.classList.remove('hidden'); submitBtn.disabled = true;
+
+    try {
+      const resp = await fetch(`${API}/api/auth/lookup`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) { showResetPhoneError('No encontramos una cuenta con ese número'); return; }
+
+      resetUserData = {
+        id: data.id,
+        nickname: data.nickname || data.name || '',
+        name: data.name || '',
+        phone: data.phone_number || phone,
+      };
+
+      // Show new password sub-step
+      document.getElementById('reset-avatar').textContent = resetUserData.nickname[0].toUpperCase();
+      document.getElementById('reset-name').textContent = resetUserData.nickname || resetUserData.name;
+      document.getElementById('reset-phone').textContent = resetUserData.phone;
+      document.getElementById('reset-phone-step').classList.add('hidden');
+      document.getElementById('reset-newpw-step').classList.remove('hidden');
+      document.getElementById('reset-pw-input').value = '';
+      document.getElementById('reset-pw-confirm').value = '';
+      document.getElementById('reset-pw-error').classList.add('hidden');
+      document.getElementById('reset-pw-input').focus();
+    } catch (err) {
+      console.error(err); showResetPhoneError('Error de conexión');
+    } finally {
+      btnText.classList.remove('hidden'); btnLoader.classList.add('hidden'); submitBtn.disabled = false;
+    }
+  });
+
+  // Password visibility toggles
+  const resetPwInput = document.getElementById('reset-pw-input');
+  const resetPwToggle = document.getElementById('reset-pw-toggle');
+  resetPwToggle.addEventListener('click', () => {
+    const isPassword = resetPwInput.type === 'password';
+    resetPwInput.type = isPassword ? 'text' : 'password';
+    resetPwToggle.textContent = isPassword ? 'visibility' : 'visibility_off';
+  });
+
+  const resetConfirmInput = document.getElementById('reset-pw-confirm');
+  const resetConfirmToggle = document.getElementById('reset-pw-confirm-toggle');
+  resetConfirmToggle.addEventListener('click', () => {
+    const isPassword = resetConfirmInput.type === 'password';
+    resetConfirmInput.type = isPassword ? 'text' : 'password';
+    resetConfirmToggle.textContent = isPassword ? 'visibility' : 'visibility_off';
+  });
+
+  // Step 2: Set new password
+  document.getElementById('reset-pw-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const newPw = document.getElementById('reset-pw-input').value.trim();
+    const confirmPw = document.getElementById('reset-pw-confirm').value.trim();
+
+    if (!newPw || newPw.length < 4) { showResetPwError('Mínimo 4 caracteres'); return; }
+    if (newPw !== confirmPw) { showResetPwError('Las contraseñas no coinciden'); return; }
+
+    const btnText = document.getElementById('reset-pw-btn-text');
+    const btnLoader = document.getElementById('reset-pw-btn-loader');
+    const submitBtn = document.getElementById('reset-pw-submit');
+    btnText.classList.add('hidden'); btnLoader.classList.remove('hidden'); submitBtn.disabled = true;
+
+    try {
+      const resp = await fetch(`${API}/api/auth/change-password`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: resetUserData.id, new_password: newPw }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) { showResetPwError(data.error || 'Error al cambiar contraseña'); return; }
+
+      // Show success
+      document.getElementById('reset-newpw-step').classList.add('hidden');
+      document.getElementById('reset-success').classList.remove('hidden');
+    } catch (err) {
+      console.error(err); showResetPwError('Error de conexión');
+    } finally {
+      btnText.classList.remove('hidden'); btnLoader.classList.add('hidden'); submitBtn.disabled = false;
+    }
+  });
+
+  // "Ir al login" button after success
+  document.getElementById('reset-go-login').addEventListener('click', () => {
+    document.getElementById('step-reset').classList.add('hidden');
+    document.getElementById('step-phone').classList.remove('hidden');
+    document.getElementById('phone-input').focus();
+    resetUserData = null;
+  });
+}
+
+function showResetPhoneError(msg) {
+  document.getElementById('reset-phone-error-text').textContent = msg;
+  document.getElementById('reset-phone-error').classList.remove('hidden');
+}
+
+function showResetPwError(msg) {
+  document.getElementById('reset-pw-error-text').textContent = msg;
+  document.getElementById('reset-pw-error').classList.remove('hidden');
 }
 
 
