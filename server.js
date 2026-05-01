@@ -28,6 +28,9 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public-v2')));
 app.use('/legacy', express.static(path.join(__dirname, 'public')));
 
+// ─── Email tracking (open pixel + click redirect) ───
+app.use('/email', require('./routes/email_tracking'));
+
 // ─── Health check ───
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'kipi-api', version: '1.0.0' });
